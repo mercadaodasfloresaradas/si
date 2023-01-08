@@ -1,0 +1,96 @@
+---------------data structures---------------------
+
+### sales ###
+
+details.json{
+    id: "",
+    name: "",
+    phone: "",
+    priceTotal: 1,
+    address: "",
+    date: "",
+    state: "",//toPay, payed, finalized, old
+}
+
+conversations{
+    messages: [
+        {sender: "s", message: ""},//seller
+        {sender: "c", message: ""}//client
+    ],
+}
+
+purchased-products{
+    products: [
+        {id: "", category: "", name: "", price: 1 },
+    ]
+}
+
+### sales ###
+
+### products ###
+
+product{
+    id: "",
+    name: "",
+    price: 1 ,
+    description: "",
+    category: ""
+}
+
+product_Photo{
+    img64: ""
+}
+
+#not used
+categories{
+    selling: [""],
+    outOfSale: [""],
+}
+
+### products ###
+
+### config ###
+
+configs{
+    contacts: "",
+    payMethods: "",
+    noService: "",
+    welcome: "",
+    storeName: "",
+    warnings: "",
+    delivery: "",
+    support: "",
+    returns: "",
+}
+
+### config ###
+
+---------------data structures---------------------
+
+---------------db folder structure---------------------
+
+DB
+    |
+    --purchases
+    |       |
+    |       --newPurchases   
+    |       |
+    |       --finilized    
+    |       |
+    |       --old    
+    |
+    --products
+    |       |
+    |       --sale
+    |       |   |
+    |       |   --"category1"
+    |       |   |
+    |       |   --"category2"
+    |       |   |
+    |       |   --"..."
+    |       |
+    |       |
+    |       --outOfSale
+    --configs
+
+---------------data structures---------------------
