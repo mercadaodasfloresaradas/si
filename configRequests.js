@@ -32,7 +32,7 @@ configRequests.configIntegrityProcess = async (dbManager)=>{
             returns: "Devolvemos o dinheiro, até ao dia antes da entrega.",
             //basket
             limitProducts: 20,
-            limitDaily: 5,
+            limitDaily: 10,
             //placed order
             warnings: `Pagar valor do/s producto/s para dar o seguimento inicial
 Posteriormente será enviada uma mensagem com o custo do envio
@@ -248,7 +248,7 @@ configRequests.buildRequests = (app, dbManager) =>{
                         }
                     });
 
-                    if(hasFoundNoMatch){
+                    if(hasFoundNoMatch || typeof result.data.limitProducts != 'number' || typeof result.data.limitDaily != 'number'){
                         res.send({error: "Data structure not compactible!"});
                     }else{
                         configRequests.configs = result.data;

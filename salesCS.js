@@ -1,12 +1,12 @@
 const salesCS = {};
 salesCS.salesCache = {};
+salesCS.purchasesIPs = {};
 salesCS.hasCacheUpdatedInternal = false;
 
 salesCS.init = (app, dbManager) => {
     salesCS.cacheSetup(dbManager);
+    salesCS.salesIPSetup(dbManager);
     salesCS.buildRequests(app, dbManager);
-
-    
 }
 
 salesCS.cacheSetup = async(dbManager) => {
@@ -29,6 +29,19 @@ salesCS.cacheSetup = async(dbManager) => {
         salesCS.hasCacheUpdatedInternal = false;
     });
 
+}
+
+salesCS.salesIPSetup = async(dbManager) => {
+
+    let finalSalesIPs = {};
+    
+    if(!dbManager.checkIfFileExists(process.env.SALES_IP_FILE)){
+        dbManager.writeFile("", process.env.SALES_IP_FILE, finalSalesIPs);
+    }else{
+        finalSalesIPs = await dbManager.readFile("", process.env.SALES_IP_FILE, true);
+    }
+
+    salesCS.purchasesIPs = finalSalesIPs;
 }
 
 salesCS.uuid = (length) =>{
@@ -91,6 +104,24 @@ salesCS.calcTotalWithDecimalsPrecise = (products) =>{
     return +`${total}.${inDecimal}`;
 }
 
+salesCS.parcialDeleteSalesIPs = (dbManager) =>{
+    const values = Object.keys(salesCS.purchasesIPs).slice(0,5);
+    values.slice(5).forEach((ip)=>{
+        if((salesCS.purchasesIPs[ip].time + 86400000) < (new Date().getTime())){
+            delete salesCS.purchasesIPs[ip];
+        }
+    })
+    dbManager.writeFile("", process.env.SALES_IP_FILE, salesCS.purchasesIPs);
+}
+
+salesCS.writeSalesIPs = (ip, dbManager, hasToReset) => {
+    salesCS.parcialDeleteSalesIPs(dbManager);
+    salesCS.purchasesIPs[ip] = salesCS.purchasesIPs[ip] && !hasToReset ? 
+                                {count: salesCS.purchasesIPs[ip].count + 1, time: salesCS.purchasesIPs[ip].time} : 
+                                {count: 1, time: new Date().getTime()};
+    dbManager.writeFile("", process.env.SALES_IP_FILE, salesCS.purchasesIPs);
+}
+
 salesCS.writeCache = (id, state, dbManager, isInternal = false) =>{
     salesCS.salesCache[id] = state;
     salesCS.hasCacheUpdatedInternal = isInternal;
@@ -115,11 +146,19 @@ salesCS.buildRequests = (app, dbManager) =>{
     app.post('/sales/new', async(req, res)=> {
         const result = JSON.parse(req.body || {name: "", phone: "", address: "", "NIF": "", products: []});
         const expectedKeys = ["name", "phone", "address", "products", "NIF", "hasToSave"];
+        const clientIp = req.headers && req.headers['store-origin'] ? req.headers['store-origin'] : ''; 
+        let ipCondition = salesCS.purchasesIPs[clientIp] !== undefined && 
+                            (salesCS.purchasesIPs[clientIp].count + 1) > process.getConfigs().limitDaily &&
+                            (salesCS.purchasesIPs[clientIp].time + 86400000) > (new Date().getTime());
+        
 
-        console.log('sales/new', result);
+        console.log('sales/new', result, ' \n', clientIp);
+        
 
         if(process.checkBody(expectedKeys, result)){
             res.send({error: "Data structure not compactible!"});
+        }else if(ipCondition && result.hasToSave){
+            res.send({error: "Daily purchases exceded!", isOutOfLimit: true});
         }else if(typeof result.name === "string" && result.name.replaceAll(" ", "") != "" &&
                     typeof result.phone === "string" && result.phone.replaceAll(" ", "") != "" &&
                     typeof result.address === "string" && result.address.replaceAll(" ", "") != "" && 
@@ -204,6 +243,7 @@ salesCS.buildRequests = (app, dbManager) =>{
                 if(result.hasToSave){
                     const newID = salesCS.uuid(6);
                     const finalPath = basePathPurchase + newID + "/";
+                    const hasToResetIP = salesCS.purchasesIPs[clientIp] ? (salesCS.purchasesIPs[clientIp].time + 86400000) < (new Date().getTime()) : false;
     
                     details.id = newID;
                     details.priceTotal = priceTotal;
@@ -218,6 +258,8 @@ salesCS.buildRequests = (app, dbManager) =>{
                     await dbManager.writeFile(finalPath, "conversations.json" , { messages: []});
     
                     salesCS.writeCache(newID, details.state, dbManager, true);
+                    salesCS.writeSalesIPs(clientIp, dbManager, hasToResetIP);
+                    console.log('IP: ', clientIp, ' -> Data: ', salesCS.purchasesIPs[clientIp], ' -> max count ->', process.getConfigs().limitDaily);
     
                     res.send({success: "Successful purchase!", id: newID, total: priceTotal});
                 }else{
