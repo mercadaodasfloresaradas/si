@@ -51,7 +51,22 @@ Paypal: helena@hotmail.com,`,
             finalized: "Concluio a sua compra com sucesso!",
             //footer
             facebook: 'www.facebook.com',
-            instagram: 'www.instragram.com'
+            instagram: 'www.instragram.com',
+            //contacts page
+            contactsPage: `
+            Horários
+            Seg:
+            Ter:
+            Qua:
+            Qui:
+            Sex:
+            Contacto
+            Rua do buragal nº 218 Aradas-Aveiro
+            3810-382
+            TLF: 234427229
+            TLM:963928334
+            hsilva.maria@gmail.com
+            `
         };
 
         dbManager.writeFile(process.env.CONFIGS_ROUTE + "/",
@@ -205,6 +220,14 @@ configRequests.buildRequests = (app, dbManager) =>{
         });
     });
 
+    //contacts page
+    app.get('/config/contacts/page', async (req, res)=>{
+        await updateConfigs();
+        res.send({
+            config: configRequests.configs.contactsPage 
+        });
+    });
+
     if(process.isSeller){
 
         /*
@@ -227,6 +250,7 @@ configRequests.buildRequests = (app, dbManager) =>{
                     "limitDaily": 0,
                     "facebook": "test",
                     "instagram": "test",
+                    "contactsPage": "test",
                 }
             }
         */

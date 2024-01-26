@@ -140,31 +140,60 @@ salesCS.buildRequests = (app, dbManager) =>{
         "phone": "",
         "address": "",
         "NIF": "",
+        "destName": "",
+        "destPhone": "",
+        "giftMessage": "",
+        "deliverDate": 0,
         "products": [{"id": "", "category": ""}],
         "hasToSave": true
      */
     app.post('/sales/new', async(req, res)=> {
-        const result = JSON.parse(req.body || {name: "", phone: "", address: "", "NIF": "", products: []});
-        const expectedKeys = ["name", "phone", "address", "products", "NIF", "hasToSave"];
+        const result = JSON.parse(req.body || {name: "", phone: "", address: "", "NIF": "", products: [], destName: "", destPhone: "", giftMessage: ""});
+        const expectedKeys = ["name", "phone", "address", "products", "NIF", "hasToSave", "destName", "destPhone", "giftMessage", "deliverDate"];
         const clientIp = req.headers && req.headers['store-origin'] ? req.headers['store-origin'] : ''; 
         let ipCondition = salesCS.purchasesIPs[clientIp] !== undefined && 
                             (salesCS.purchasesIPs[clientIp].count + 1) > process.getConfigs().limitDaily &&
                             (salesCS.purchasesIPs[clientIp].time + 86400000) > (new Date().getTime());
+        const currentDate = new Date();
+        currentDate.setHours(0);
+        currentDate.setMinutes(0);
+        currentDate.setSeconds(0);
+        const currentMillis = currentDate.getTime();
+        
+        const isNameOk = typeof result.name === "string" && !!result.name.replaceAll(" ", "") != "" && result.name.length < 100;
+        const isPhoneOk = typeof result.phone === "string" && !!result.phone.replaceAll(" ", "") != "" && result.phone.length < 15;
+        const isAddressOk = typeof result.address === "string" && !!result.address.replaceAll(" ", "") != "" && result.address.length < 250;
+        const isNIFOk = typeof result.NIF === "string" && !!result.NIF.replaceAll(" ", "") != "" && result.NIF.length < 10;
+        const isDestNameOk = typeof result.destName === "string" && !!result.destName.replaceAll(" ", "") != "" && result.destName.length < 100;
+        const isDestPhoneOk = typeof result.destPhone === "string" && !!result.destPhone.replaceAll(" ", "") != "" && result.destPhone.length < 15;
+        const isGiftMessageOk = typeof result.giftMessage === "string" && result.giftMessage.length < 2000;
+        const isDeliverDateOK = typeof result.deliverDate === "number" && result.deliverDate > currentMillis;
+        const areProductsOk = Array.isArray(result.products) && !!result.products.length > 0;
+        const areProductsWithinLimit = Array.isArray(result.products) && !!result.products.length > 0;
         
 
         console.log('sales/new', result, ' \n', clientIp);
+        console.log({
+            ipCondition,
+            isNameOk,
+            isPhoneOk,
+            isAddressOk,
+            isNIFOk,
+            isDestNameOk,
+            isDestPhoneOk,
+            isGiftMessageOk,
+            isDeliverDateOK,
+            areProductsOk,
+            areProductsWithinLimit
+        });
         
 
         if(process.checkBody(expectedKeys, result)){
             res.send({error: "Data structure not compactible!"});
         }else if(ipCondition && result.hasToSave){
             res.send({error: "Daily purchases exceded!", isOutOfLimit: true});
-        }else if(typeof result.name === "string" && result.name.replaceAll(" ", "") != "" &&
-                    typeof result.phone === "string" && result.phone.replaceAll(" ", "") != "" &&
-                    typeof result.address === "string" && result.address.replaceAll(" ", "") != "" && 
-                    typeof result.NIF === "string" && result.NIF.replaceAll(" ", "") != "" && 
-                    Array.isArray(result.products) && result.products.length > 0 &&
-                   result.products.length <= process.getConfigs().limitProducts){
+        }else if(isNameOk && isPhoneOk && isAddressOk && isNIFOk && isDestNameOk && isDestPhoneOk &&
+                    isGiftMessageOk && areProductsOk && areProductsWithinLimit && isDeliverDateOK){
 
             const basePathProduct = process.env.PRODUCTS_ROUTE + process.env.SALE_ROUTE;
             const basePathPurchase = process.env.PURCHASES_ROUTE + process.env.NEW_PURCHASES_ROUTE + "/";
@@ -178,6 +207,10 @@ salesCS.buildRequests = (app, dbManager) =>{
                 phone: result.phone,
                 address: result.address,
                 NIF: result.NIF,
+                destName: result.destName,
+                destPhone: result.destPhone,
+                giftMessage: result.giftMessage,
+                deliverDate: result.deliverDate,
             };
             
             for(const product of result.products){

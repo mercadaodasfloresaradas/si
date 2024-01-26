@@ -85,8 +85,8 @@ dbFoldersIntegrity.init(dbManager, ()=>{
  */
 app.post('/', async (req, res)=> {
     const result = JSON.parse(req.body || {});
-    console.log("main route");
-
+    console.log("main route ", req.headers['store-origin']);
+    
     if(result.inner){
         const hasCode = await process.checkCode(result.inner);
         console.log("Resgiter App with code: ", result.inner, " \n And result is: ", hasCode);
@@ -94,7 +94,7 @@ app.post('/', async (req, res)=> {
     }else{
         res.send("Home");
     }
-
+    
 });
 
 app.get('/', (req, res)=> {

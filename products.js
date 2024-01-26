@@ -236,6 +236,9 @@ products.buildRequests = (app, dbManager, productsCS) => {
     }
      */
     app.delete('/products/remove', async (req, res)=> {
+        console.log('/products/remove');
+        console.log(req);
+        console.log(req.body);
         const result = JSON.parse(req.body || {id: "", category: ""});
         const expectedKeys = ["code", "id", "category"];
         const hasCode = await process.checkCode(result.code);
